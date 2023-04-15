@@ -343,10 +343,49 @@ func main() {
 
 		for {
 			_, message, err := c.ReadMessage()
+
 			if err != nil {
 				log.Infof("read:", err)
 				return
 			}
+
+			var mw *Mower
+
+			err = json.Unmarshal([]byte(message), mw)
+
+			if err != nil {
+				log.Errorf("Error parsing mower message")
+				continue
+			}
+
+			switch (mw.Type) {
+			case "mower":
+				log.Infof("received mower message (never?): %v", mw)
+			case "status-event":
+				if mw.Attributes.Battery != (Battery{}) {
+					log.Infof("Updating battery data: %v", mw.Attributes.Battery)
+				}
+
+				if mw.Attributes.Mower != (MowerData{}) {
+					log.Infof("Updating mower data: %v", mw.Attributes.Mower)
+				}
+
+				if mw.Attributes.Metadata != (Metadata{}) {
+					log.Infof("Updating metadata: %v", mw.Attributes.Metadata)
+				}
+
+				if mw.Attributes.Planner != (Planner{}) {
+					log.Infof("Updating planner: %v", mw.Attributes.Planner)
+				}
+			case "positions-event":
+				// always ignore
+				log.Infof("Received position event: %v", mw)
+			}
+
+
+
+
+
 			log.Infof("recv: %s", message)
 		}
 	}()

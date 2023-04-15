@@ -4,16 +4,48 @@ on:
   push:
     branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ ]
+
+env:
+  REGISTRY: ghcr.io
+  GOOS: linux
+  GOARCH: amd64
 
 jobs:
   build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.19
+
+    - name: Build
+      run: go build -v ./...
+
+    - name: Archive artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: husqvarna-exporter
+        path: husqvarna-exporter
+
+  package:
+    needs: build
 
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v3
-      
+      with:
+        fetch-depth: 0
+  
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: husqvarna-exporter
+
     - name: Extract git tag
       run: |
         #! /bin/bash
@@ -21,6 +53,17 @@ jobs:
         GIT_VERSION=$(git describe --tags --dirty)
 
         echo "GIT_VERSION=$GIT_VERSION" >> $GITHUB_ENV
+        chmod +x husqvarna-exporter
      
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ghcr.io/thoro/husqvarna-exporter:${GIT_VERSION}
+    - name: Log in to the Container registry
+      uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+ 
+    - name: Build Docker image
+      run: docker build --file Dockerfile --tag ghcr.io/thoro/husqvarna-exporter:${GIT_VERSION} .
+    - name: Push docker image
+      run: docker push ghcr.io/thoro/husqvarna-exporter:${GIT_VERSION}
+     
