@@ -1,0 +1,26 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      
+    - name: Extract git tag
+      run: |
+        #! /bin/bash
+        git fetch --tags
+        GIT_VERSION=$(git describe --tags --dirty)
+
+        echo "GIT_VERSION=$GIT_VERSION" >> $GITHUB_ENV
+     
+    - name: Build the Docker image
+      run: docker build . --file Dockerfile --tag ghcr.io/thoro/husqvarna-exporter:${GIT_VERSION}
