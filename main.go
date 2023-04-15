@@ -1,15 +1,14 @@
 package main
 
 import (
-	"os"
-	"fmt"
-	"time"
 	"bytes"
-	"strconv"
-	"io/ioutil"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
-
+	"os"
+	"strconv"
+	"time"
 
 	"github.com/gorilla/websocket"
 
@@ -22,166 +21,166 @@ import (
 
 // METRICS
 var (
-    battery_percent = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "battery_percent",
-    	Help: "Current battery status in percent",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	battery_percent = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "battery_percent",
+		Help:      "Current battery status in percent",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    connected = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "connected",
-    	Help: "Connection status of the automower",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	connected = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "connected",
+		Help:      "Connection status of the automower",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    last_update = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "last_update",
-    	Help: "Unix timestamp of the last automower update",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	last_update = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "last_update",
+		Help:      "Unix timestamp of the last automower update",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    activity = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "activity",
-    	Help: "Current mower activity",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    	"activity",
-    })
+	activity = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "activity",
+		Help:      "Current mower activity",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+		"activity",
+	})
 
-    mode = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "mode",
-    	Help: "Current mower mode",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    	"mode",
-    })
+	mode = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "mode",
+		Help:      "Current mower mode",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+		"mode",
+	})
 
-    state = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "state",
-    	Help: "Current mower state",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    	"state",
-    })
+	state = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "state",
+		Help:      "Current mower state",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+		"state",
+	})
 
-    next_start = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "next_start",
-    	Help: "Unix timestamp of the next automower start",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	next_start = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "next_start",
+		Help:      "Unix timestamp of the next automower start",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    cutting_height = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "cutting_height",
-    	Help: "Current cutting height",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	cutting_height = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "cutting_height",
+		Help:      "Current cutting height",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    blade_usage_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "blade_usage_time",
-    	Help: "Total time for blade usage",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	blade_usage_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "blade_usage_time",
+		Help:      "Total time for blade usage",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    charging_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "charging_time",
-    	Help: "Total time charging",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	charging_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "charging_time",
+		Help:      "Total time charging",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    cutting_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "cutting_time",
-    	Help: "Total time cutting",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	cutting_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "cutting_time",
+		Help:      "Total time cutting",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    running_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "running_time",
-    	Help: "Total time running",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	running_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "running_time",
+		Help:      "Total time running",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    searching_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "searching_time",
-    	Help: "Total time searching",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	searching_time = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "searching_time",
+		Help:      "Total time searching",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    charging_cycles = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "charging_cycles",
-    	Help: "Number of charging cycles",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	charging_cycles = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "charging_cycles",
+		Help:      "Number of charging cycles",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    collisions = promauto.NewGaugeVec(prometheus.GaugeOpts{
-    	Namespace: "mower",
-    	Name: "collisions",
-    	Help: "Number of collisions",
-    }, []string{
-    	"serial",
-    	"name",
-    	"model",
-    })
+	collisions = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "mower",
+		Name:      "collisions",
+		Help:      "Number of collisions",
+	}, []string{
+		"serial",
+		"name",
+		"model",
+	})
 
-    api_requests_used = promauto.NewCounterVec(prometheus.CounterOpts{
-    	Namespace: "mower",
-    	Name: "api_requests_users",
-    	Help: "Number of api requests since start"
-    }, []string{
-    	"client_id",
-    })
+	api_requests_used = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "mower",
+		Name:      "api_requests_users",
+		Help:      "Number of api requests since start",
+	}, []string{
+		"client_id",
+	})
 )
 
 func main() {
@@ -205,7 +204,7 @@ func main() {
 	// Startup webserver
 	http.Handle("/metrics", promhttp.Handler())
 
-	go func () {
+	go func() {
 		err := http.ListenAndServe(":2118", nil)
 
 		if err != nil {
@@ -223,7 +222,7 @@ func main() {
 
 	// Update mowers
 
-	go func () {
+	go func() {
 		t := time.NewTicker(30 * time.Second)
 
 		for {
@@ -264,7 +263,7 @@ func main() {
 					connected.WithLabelValues(serial, name, model).Set(connectedVal)
 					last_update.WithLabelValues(serial, name, model).Set(float64(mower.Attributes.Metadata.StatusTimestamp))
 
-					mw_update := time.Unix(int64(mower.Attributes.Metadata.StatusTimestamp) / 1000, 0)
+					mw_update := time.Unix(int64(mower.Attributes.Metadata.StatusTimestamp)/1000, 0)
 
 					log.Infof("Last update: %v", mw_update)
 
@@ -327,13 +326,11 @@ func main() {
 					log.Infof("Resetting timer to 30 seconds")
 				}
 
-
 			}
 		}
 	}()
 
-
-	c, _, err := websocket.DefaultDialer.Dial("wss://ws.openapi.husqvarna.dev/v1", http.Header{ "Authorization": []string{ "Bearer " + h.Token.AccessToken} })
+	c, _, err := websocket.DefaultDialer.Dial("wss://ws.openapi.husqvarna.dev/v1", http.Header{"Authorization": []string{"Bearer " + h.Token.AccessToken}})
 
 	if err != nil {
 		log.Errorf("Error connecting to websocket!")
@@ -354,7 +351,7 @@ func main() {
 		}
 	}()
 
-	go func () {
+	go func() {
 		t := time.NewTicker(60 * time.Second)
 
 		for {
@@ -373,59 +370,59 @@ func main() {
 }
 
 var (
-	MODES = []string{ "MAIN_AREA", "SECONDARY_AREA", "HOME", "DEMO", "UNKNOWN" }
-	ACTIVITIES = []string{ "UNKNOWN", "NOT_APPLICABLE", "MOWING", "GOING_HOME", "CHARGING", "LEAVING", "PARKED_IN_CS", "STOPPED_IN_GARDEN" }
-	STATES = []string{ "UNKNOWN", "NOT_APPLICABLE", "PAUSED", "IN_OPERATION", "WAIT_UPDATING", "WAIT_POWER_UP", "RESTRICTED", "OFF", "STOPPED", "ERROR", "FATAL_ERROR", "ERROR_AT_POWER_UP" }
+	MODES      = []string{"MAIN_AREA", "SECONDARY_AREA", "HOME", "DEMO", "UNKNOWN"}
+	ACTIVITIES = []string{"UNKNOWN", "NOT_APPLICABLE", "MOWING", "GOING_HOME", "CHARGING", "LEAVING", "PARKED_IN_CS", "STOPPED_IN_GARDEN"}
+	STATES     = []string{"UNKNOWN", "NOT_APPLICABLE", "PAUSED", "IN_OPERATION", "WAIT_UPDATING", "WAIT_POWER_UP", "RESTRICTED", "OFF", "STOPPED", "ERROR", "FATAL_ERROR", "ERROR_AT_POWER_UP"}
 )
 
 var (
 	LOGIN_URL = "https://api.authentication.husqvarnagroup.dev/v1"
-	API_URL = "https://api.amc.husqvarna.dev/v1"
+	API_URL   = "https://api.amc.husqvarna.dev/v1"
 )
 
 type Husqvarna struct {
-	ClientId string
+	ClientId     string
 	ClientSecret string
-	Token Token
+	Token        Token
 }
 
 type Token struct {
 	AccessToken string `json:"access_token"`
-	Scope string `json:"scope"`
-	ExpiresIn int `json:"expires_in"`
-	ExpiresAt time.Time
-	Provider string `json:"provider"`
-	UserId string `json:"user_id"`
-	TokenType string `json:"token_type"`
+	Scope       string `json:"scope"`
+	ExpiresIn   int    `json:"expires_in"`
+	ExpiresAt   time.Time
+	Provider    string `json:"provider"`
+	UserId      string `json:"user_id"`
+	TokenType   string `json:"token_type"`
 }
 
 type MowersResponse struct {
-	Data []Mower `json:"data"`
+	Data   []Mower `json:"data"`
 	Errors []Error `json:"errors"`
 }
 
 type Mower struct {
-	Type string `json:"type"`
-	Id string `json:"id"`
+	Type       string     `json:"type"`
+	Id         string     `json:"id"`
 	Attributes Attributes `json:"attributes"`
 }
 
 type Attributes struct {
-	System System `json:"system"`
-	Battery Battery `json:"battery"`
-	Mower MowerData `json:"mower"`
-	Calendar Calendar `json:"calendar"`
-	Planner Planner `json:"planner"`
-	Metadata Metadata `json:"metadata"`
-	Positions []Position `json:"positions"`
-	Settings Settings `json:"settings"`
+	System     System     `json:"system"`
+	Battery    Battery    `json:"battery"`
+	Mower      MowerData  `json:"mower"`
+	Calendar   Calendar   `json:"calendar"`
+	Planner    Planner    `json:"planner"`
+	Metadata   Metadata   `json:"metadata"`
+	Positions  []Position `json:"positions"`
+	Settings   Settings   `json:"settings"`
 	Statistics Statistics `json:"statistics"`
 }
 
 type System struct {
-	Name string `json:"name"`
-	Model string `json:"model"`
-	SerialNumber int `json:"serialNumber"`
+	Name         string `json:"name"`
+	Model        string `json:"model"`
+	SerialNumber int    `json:"serialNumber"`
 }
 
 type Battery struct {
@@ -433,11 +430,11 @@ type Battery struct {
 }
 
 type MowerData struct {
-	Mode string `json:"mode"`
-	Activity string `json:"activity"`
-	State string `json:"state"`
-	ErrorCode int `json:"errorCode"`
-	ErrorCodeTimestamp int `json:"errorCodeTimestamp"`
+	Mode               string `json:"mode"`
+	Activity           string `json:"activity"`
+	State              string `json:"state"`
+	ErrorCode          int    `json:"errorCode"`
+	ErrorCodeTimestamp int    `json:"errorCodeTimestamp"`
 }
 
 type Calendar struct {
@@ -445,21 +442,21 @@ type Calendar struct {
 }
 
 type Task struct {
-	Start int `json:"start"`
-	Duration int `json:"duration"`
-	Monday bool `json:"monday"`
-	Tuesday bool `json:"tuesday"`
+	Start     int  `json:"start"`
+	Duration  int  `json:"duration"`
+	Monday    bool `json:"monday"`
+	Tuesday   bool `json:"tuesday"`
 	Wednesday bool `json:"wednesday"`
-	Thursday bool `json:"thursday"`
-	Friday bool `json:"friday"`
-	Saturday bool `json:"saturday"`
-	Sunday bool `json:"sunday"`
+	Thursday  bool `json:"thursday"`
+	Friday    bool `json:"friday"`
+	Saturday  bool `json:"saturday"`
+	Sunday    bool `json:"sunday"`
 }
 
 type Planner struct {
-	NextStartTimestamp int `json:"nextStartTimestamp"`
-	Override Action `json:"override"`
-	RestricedReason string `json:"restrictedReason"`
+	NextStartTimestamp int    `json:"nextStartTimestamp"`
+	Override           Action `json:"override"`
+	RestricedReason    string `json:"restrictedReason"`
 }
 
 type Action struct {
@@ -467,18 +464,18 @@ type Action struct {
 }
 
 type Metadata struct {
-	Connected bool `json:"connected"`
-	StatusTimestamp int `json:"statusTimestamp"`
+	Connected       bool `json:"connected"`
+	StatusTimestamp int  `json:"statusTimestamp"`
 }
 
 type Position struct {
-	Latitude float64 `json:"latitude"`
+	Latitude  float64 `json:"latitude"`
 	Longitude float64 `json:"longitude"`
 }
 
 type Settings struct {
-	CuttingHeight int `json:"cuttingHeight"`
-	Headlight Headlight `json:"headlight"`
+	CuttingHeight int       `json:"cuttingHeight"`
+	Headlight     Headlight `json:"headlight"`
 }
 
 type Headlight struct {
@@ -486,26 +483,26 @@ type Headlight struct {
 }
 
 type Statistics struct {
-	CuttingBladeUsageTime int `json:"cuttingBladeUsageTime"`
+	CuttingBladeUsageTime  int `json:"cuttingBladeUsageTime"`
 	NumberOfChargingCycles int `json:"numberOfChargingCycles"`
-	NumberOfCollisions int `json:"numberOfCollisions"`
-	TotalChargingTime int `json:"totalChargingTime"`
-	TotalCuttingTime int `json:"totalCuttingTime"`
-	TotalRunningTime int `json:"totalRunningTime"`
-	TotalSearchingTime int `json:"totalSearchingTime"`
+	NumberOfCollisions     int `json:"numberOfCollisions"`
+	TotalChargingTime      int `json:"totalChargingTime"`
+	TotalCuttingTime       int `json:"totalCuttingTime"`
+	TotalRunningTime       int `json:"totalRunningTime"`
+	TotalSearchingTime     int `json:"totalSearchingTime"`
 }
 
 type Error struct {
-	Id string `json:"id"`
+	Id     string `json:"id"`
 	Status string `json:"status"`
-	Code string `json:"code"`
-	Title string `json:"title"`
+	Code   string `json:"code"`
+	Title  string `json:"title"`
 	Detail string `json:"detail"`
 }
 
 func NewHusqvarna(clientId, clientSecret string) *Husqvarna {
 	return &Husqvarna{
-		ClientId: clientId,
+		ClientId:     clientId,
 		ClientSecret: clientSecret,
 	}
 }
@@ -514,7 +511,7 @@ func (h *Husqvarna) Login() error {
 
 	client := getClient()
 
-	req, err := http.NewRequest("POST", LOGIN_URL + "/oauth2/token", bytes.NewBuffer([]byte(fmt.Sprintf("grant_type=client_credentials&client_id=%s&client_secret=%s", h.ClientId, h.ClientSecret))))
+	req, err := http.NewRequest("POST", LOGIN_URL+"/oauth2/token", bytes.NewBuffer([]byte(fmt.Sprintf("grant_type=client_credentials&client_id=%s&client_secret=%s", h.ClientId, h.ClientSecret))))
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -539,13 +536,13 @@ func (h *Husqvarna) Login() error {
 	json.NewDecoder(resp.Body).Decode(&token)
 
 	h.Token = token
-	h.Token.ExpiresAt = time.Now().Add(time.Duration(h.Token.ExpiresIn - 1000) * time.Second)
+	h.Token.ExpiresAt = time.Now().Add(time.Duration(h.Token.ExpiresIn-1000) * time.Second)
 
 	return nil
 }
 
 func (h *Husqvarna) Mowers() (*MowersResponse, error) {
-	data, err := h.queryGet(API_URL + "/mowers", 200)
+	data, err := h.queryGet(API_URL+"/mowers", 200)
 
 	if err != nil {
 		return nil, err
@@ -571,20 +568,20 @@ func (h *Husqvarna) query(method, url string, expected int, req_content []byte) 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization-Provider", h.Token.Provider)
 	req.Header.Set("X-Api-Key", h.ClientId)
-	req.Header.Add("Authorization", "Bearer " + h.Token.AccessToken)
+	req.Header.Add("Authorization", "Bearer "+h.Token.AccessToken)
 
 	api_requests_used.WithLabelValues(h.ClientId).Inc()
 
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return nil, fmt.Errorf("Unable to send request: %w", err.Error())
+		return nil, fmt.Errorf("Unable to send request: %w", err)
 	}
 
 	res_content, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != expected {
-		return res_content, fmt.Errorf("Request was not successful: %w, %s", resp.StatusCode, string(res_content))
+		return res_content, fmt.Errorf("Request was not successful: %d, %s", resp.StatusCode, string(res_content))
 	}
 
 	return res_content, nil
@@ -597,4 +594,3 @@ func (h *Husqvarna) queryPost(url string, expected int, content []byte) ([]byte,
 func (h *Husqvarna) queryGet(url string, expected int) ([]byte, error) {
 	return h.query("GET", url, expected, []byte{})
 }
-
