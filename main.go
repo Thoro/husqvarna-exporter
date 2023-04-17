@@ -354,7 +354,7 @@ func main() {
 			err = json.Unmarshal([]byte(message), mw)
 
 			if err != nil {
-				log.Errorf("Error parsing mower message")
+				log.Errorf("Error parsing mower message: %w: %v", err, message)
 				continue
 			}
 
